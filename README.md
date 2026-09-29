@@ -4,9 +4,9 @@ An interactive 3D demonstration of how a robot arm made only of rotary joints tu
 
 Everything runs in a single HTML file in the browser. There is nothing to build or install.
 
-![Arm Kinematics Lab](docs/screenshot.png)
-
 [Arm Kinematics Lab Demo](https://jurgenkobierczynski.com/Arm_Kinematics_Lab/Arm_Kinematics_Lab.html)
+
+![Arm Kinematics Lab](docs/screenshot.jpg)
 
 ## Made with Claude
 
