@@ -1,0 +1,491 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Arm Kinematics Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed 3D stage under a slim control bar; tool windows float above it, draggable and resizable like a teach pendant's panes. */
+:root{
+  --bg:#e9edf1; --stage:#f3f5f8; --panel:#fbfcfd; --panel-head:#eef1f5; --line:#cdd5de; --line-strong:#aab5c2;
+  --fg:#18212b; --muted:#5a6776; --accent:#d9661a; --accent-soft:#fbe7d8; --link-a:#4459c4; --link-b:#7d8fe3;
+  --ok:#23864f; --ok-soft:#dcf1e4; --warn:#a86a00; --warn-soft:#fbefd2; --crit:#c23b33; --crit-soft:#f9dfdd;
+  --grid:#a9b3bf; --shadow:0 6px 24px rgba(24,33,43,.12),0 1px 3px rgba(24,33,43,.08);
+  --f-display:"Chakra Petch","Segoe UI",system-ui,sans-serif; --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --bar-h:52px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1217; --stage:#121920; --panel:#171f28; --panel-head:#1d2732; --line:#2b3643; --line-strong:#3d4a59;
+  --fg:#e2e8ee; --muted:#8e9aa8; --accent:#f08b3a; --accent-soft:#3a2616; --link-a:#6f82ea; --link-b:#a3b1f2;
+  --ok:#4cc27f; --ok-soft:#15301f; --warn:#e2a93a; --warn-soft:#352a12; --crit:#ef6b62; --crit-soft:#3a1a18;
+  --grid:#3b4756; --shadow:0 8px 28px rgba(0,0,0,.45),0 1px 3px rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1217; --stage:#121920; --panel:#171f28; --panel-head:#1d2732; --line:#2b3643; --line-strong:#3d4a59;
+  --fg:#e2e8ee; --muted:#8e9aa8; --accent:#f08b3a; --accent-soft:#3a2616; --link-a:#6f82ea; --link-b:#a3b1f2;
+  --ok:#4cc27f; --ok-soft:#15301f; --warn:#e2a93a; --warn-soft:#352a12; --crit:#ef6b62; --crit-soft:#3a1a18;
+  --grid:#3b4756; --shadow:0 8px 28px rgba(0,0,0,.45),0 1px 3px rgba(0,0,0,.4); color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--f-body);overflow:hidden}
+#app{position:relative;height:100%;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+button:hover{border-color:var(--line-strong)}
+button[aria-pressed="true"],button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--fg)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=number],select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;width:100%;min-width:0;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+input[type=number]:focus,select:focus{border-color:var(--accent);outline:none}
+input[type=range]{accent-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent)}
+
+/* Bar */
+.bar{position:absolute;inset:0 0 auto 0;height:var(--bar-h);display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);z-index:5000}
+.brand{font-family:var(--f-display);font-weight:600;font-size:17px;letter-spacing:.02em;white-space:nowrap}
+.brand span{color:var(--accent)}
+.status{display:flex;align-items:center;gap:12px;font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.status b{color:var(--fg);font-weight:500}
+.chip{font-family:var(--f-body);font-size:12px;font-weight:500;padding:2px 10px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.chip.ok{color:var(--ok);background:var(--ok-soft)} .chip.warn{color:var(--warn);background:var(--warn-soft)} .chip.crit{color:var(--crit);background:var(--crit-soft)}
+.toggles{margin-left:auto;display:flex;gap:6px;overflow-x:auto;min-width:0;padding:4px 0}
+.toggles button{font-size:12px;white-space:nowrap;padding:3px 9px}
+.toggles .sep{width:1px;background:var(--line);margin:2px 4px;flex:none}
+
+/* Stage */
+#stage{position:absolute;top:var(--bar-h);left:0;right:0;bottom:0;background:var(--stage);touch-action:none}
+#stage canvas{display:block}
+.legend3d{position:absolute;left:16px;bottom:12px;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);pointer-events:none}
+.legend3d i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* Panels */
+.panel{position:absolute;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:0}
+.panel.moving{opacity:.92}
+.ph{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;background:var(--panel-head);border-bottom:1px solid var(--line);border-radius:10px 10px 0 0;cursor:grab;user-select:none;touch-action:none}
+.panel.moving .ph{cursor:grabbing}
+.panel.collapsed .ph{border-bottom:0;border-radius:10px}
+.grip{width:10px;height:14px;flex:none;background-image:radial-gradient(var(--muted) 1.2px,transparent 1.3px);background-size:5px 5px;opacity:.7}
+.ph h2{margin:0;font-family:var(--f-display);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph button{width:24px;height:24px;padding:0;line-height:1;border-color:transparent;background:transparent;color:var(--muted);font-size:15px}
+.ph button:hover{border-color:var(--line);color:var(--fg)}
+.pb{flex:1;min-height:0;overflow:auto;padding:10px 12px}
+.panel.collapsed .pb,.panel.collapsed .rz{display:none}
+.rz{position:absolute;z-index:2}
+.rz-n{top:-4px;left:10px;right:10px;height:8px;cursor:ns-resize}.rz-s{bottom:-4px;left:10px;right:10px;height:8px;cursor:ns-resize}
+.rz-e{right:-4px;top:10px;bottom:10px;width:8px;cursor:ew-resize}.rz-w{left:-4px;top:10px;bottom:10px;width:8px;cursor:ew-resize}
+.rz-ne{right:-5px;top:-5px;width:14px;height:14px;cursor:nesw-resize}.rz-sw{left:-5px;bottom:-5px;width:14px;height:14px;cursor:nesw-resize}
+.rz-nw{left:-5px;top:-5px;width:14px;height:14px;cursor:nwse-resize}
+.rz-se{right:-3px;bottom:-3px;width:16px;height:16px;cursor:nwse-resize;background:linear-gradient(135deg,transparent 55%,var(--line-strong) 56%,var(--line-strong) 62%,transparent 63%,transparent 72%,var(--line-strong) 73%,var(--line-strong) 79%,transparent 80%)}
+
+/* Panel content */
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;margin:0 0 6px}
+.xyz{display:grid;grid-template-columns:44px repeat(3,minmax(0,1fr));gap:6px;align-items:center;margin-bottom:6px}
+.xyz .h{font-size:11px;color:var(--muted);text-align:center;font-family:var(--f-mono)}
+.xyz .rowname{font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.presets button{font-size:12px;padding:3px 9px}
+.err{color:var(--crit);font-size:12px;margin-top:6px;min-height:0}
+.err:empty{display:none}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.modes button{text-align:left;padding:6px 9px;line-height:1.25}
+.modes small{display:block;color:var(--muted);font-size:11px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px}
+.fields label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.fields .dim{opacity:.4}
+.check{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:10px}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0;max-width:60ch}
+.play{display:flex;align-items:center;gap:10px}
+.play input[type=range]{flex:1;min-width:80px}
+.play .t{font-family:var(--f-mono);font-size:12px;min-width:118px;text-align:right;font-variant-numeric:tabular-nums}
+#playBtn{min-width:64px;font-weight:500}
+.readout{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-family:var(--f-mono);font-size:12px;margin-top:10px;font-variant-numeric:tabular-nums}
+.readout dt{color:var(--muted)} .readout dd{margin:0}
+.chartwrap{display:flex;flex-direction:column;height:100%;gap:6px}
+.chartlegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.chartlegend i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:3px}
+.canvasbox{flex:1;min-height:80px;position:relative}
+.canvasbox canvas{position:absolute;inset:0;width:100%;height:100%}
+#calc{margin:0;font-family:var(--f-mono);font-size:12px;line-height:1.65;white-space:pre;tab-size:2;font-variant-numeric:tabular-nums}
+#calc .k{color:var(--muted)} #calc .w{color:var(--warn)} #calc .c{color:var(--crit)} #calc .hd{color:var(--accent);font-weight:500}
+
+/* Narrow screens: panels stack under the stage */
+#app.stacked{overflow:auto}
+#app.stacked .bar{position:sticky;top:0;height:auto;flex-wrap:wrap;padding-block:8px;gap:8px 12px}
+#app.stacked .toggles{margin-left:0;width:100%}
+#app.stacked #stage{position:relative;top:0;height:56vh}
+#app.stacked .panels{display:flex;flex-direction:column;gap:12px;padding:12px 16px 24px}
+#app.stacked .panel{position:static!important;width:auto!important;height:auto!important;z-index:auto!important}
+#app.stacked .ph{cursor:default}
+#app.stacked .rz,#app.stacked .grip{display:none}
+#app.stacked #p-chart .pb{height:240px}
+#app.stacked #p-calc .pb{max-height:60vh}
+#app.stacked .status .opt{display:none}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div id="app">
+  <header class="bar">
+    <div class="brand">Arm Kinematics <span>Lab</span></div>
+    <div class="status" aria-live="polite">
+      <span id="chip" class="chip ok">Clear</span>
+      <span class="opt">|det J| <b id="stDet">–</b></span>
+      <span class="opt">max θ̇ <b id="stV">–</b></span>
+    </div>
+    <nav class="toggles" aria-label="Panels">
+      <button data-panel="p-points" aria-pressed="true">Points</button>
+      <button data-panel="p-motion" aria-pressed="true">Motion</button>
+      <button data-panel="p-play" aria-pressed="true">Playback</button>
+      <button data-panel="p-chart" aria-pressed="true">Graph</button>
+      <button data-panel="p-calc" aria-pressed="true">Calculations</button>
+      <span class="sep"></span>
+      <button id="resetLayout">Reset layout</button>
+    </nav>
+  </header>
+
+  <div id="stage">
+    <div class="legend3d">
+      <span><i style="background:#d6453d"></i>X</span><span><i style="background:#2e9d5b"></i>Y</span><span><i style="background:#3b6fd8"></i>Z (up)</span>
+      <span id="lgSing"><i style="background:#d6453d;opacity:.45"></i>Singular: reach shell, inner shell, base axis</span>
+      <span>Drag to orbit · scroll to zoom · right-drag to pan</span>
+    </div>
+  </div>
+
+  <div class="panels">
+  <section class="panel" id="p-points" aria-label="Path points">
+    <div class="ph"><span class="grip"></span><h2>Path points</h2><button class="pmin" aria-label="Collapse panel">−</button><button class="pclose" aria-label="Hide panel">×</button></div>
+    <div class="pb">
+      <div class="xyz"><span></span><span class="h">X mm</span><span class="h">Y mm</span><span class="h">Z mm</span></div>
+      <div class="xyz"><span class="rowname"><span class="dot" style="background:#2e9d5b"></span>Start</span>
+        <input id="ax" type="number" step="10" aria-label="Start X"><input id="ay" type="number" step="10" aria-label="Start Y"><input id="az" type="number" step="10" aria-label="Start Z"></div>
+      <div class="xyz"><span class="rowname"><span class="dot" style="background:#d6453d"></span>End</span>
+        <input id="bx" type="number" step="10" aria-label="End X"><input id="by" type="number" step="10" aria-label="End Y"><input id="bz" type="number" step="10" aria-label="End Z"></div>
+      <div id="err" class="err" role="alert"></div>
+      <p class="lbl" style="margin-top:12px">Presets</p>
+      <div class="presets">
+        <button data-p="def">Default move</button>
+        <button data-p="axis">Through base axis</button>
+        <button data-p="stretch">Towards full stretch</button>
+        <button data-p="edge">Along edge of reach</button>
+      </div>
+      <p class="hint">Reach: the tip must be 50 to 450 mm from the shoulder at (0, 0, 200).</p>
+    </div>
+  </section>
+
+  <section class="panel" id="p-motion" aria-label="Motion type">
+    <div class="ph"><span class="grip"></span><h2>Motion type</h2><button class="pmin" aria-label="Collapse panel">−</button><button class="pclose" aria-label="Hide panel">×</button></div>
+    <div class="pb">
+      <div class="modes">
+        <button data-m="lin">Linear<small>MoveL / LIN</small></button>
+        <button data-m="joint">Joint<small>MoveJ / PTP</small></button>
+        <button data-m="arc">Circular<small>MoveC / CIRC</small></button>
+        <button data-m="jac">Jacobian steps<small>Δθ = J⁻¹·Δp</small></button>
+      </div>
+      <div class="fields">
+        <label>Elbow<select id="elbow"><option value="up">Elbow up</option><option value="down">Elbow down</option></select></label>
+        <label>Move time (s)<input id="mt" type="number" value="2" min="0.2" step="0.1"></label>
+        <label>Joint speed limit (°/s)<input id="vl" type="number" value="180" min="1" step="10"></label>
+        <label>Via height, circular (mm)<input id="via" type="number" value="150" step="10"></label>
+        <label class="jaconly">Jacobian steps<input id="nj" type="number" value="20" min="2" max="400"></label>
+        <label class="jaconly">Damping λ<input id="lam" type="number" value="0" min="0" step="10"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="sg" checked>Show singular surfaces</label>
+    </div>
+  </section>
+
+  <section class="panel" id="p-play" aria-label="Playback">
+    <div class="ph"><span class="grip"></span><h2>Playback</h2><button class="pmin" aria-label="Collapse panel">−</button><button class="pclose" aria-label="Hide panel">×</button></div>
+    <div class="pb">
+      <div class="play">
+        <button id="playBtn">Play</button>
+        <input id="sl" type="range" min="0" max="1000" value="0" aria-label="Path position">
+        <span class="t" id="tRead">s 0.00 · t 0.00 s</span>
+      </div>
+      <div class="play" style="margin-top:8px;flex-wrap:wrap">
+        <label class="check" style="margin:0">Rate
+          <select id="rate" style="width:auto"><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select></label>
+        <label class="check" style="margin:0"><input type="checkbox" id="loop">Loop</label>
+        <span style="font-size:12px;color:var(--muted)">Space plays or pauses</span>
+      </div>
+      <dl class="readout">
+        <dt>tip</dt><dd id="rTip">–</dd>
+        <dt>θ1 θ2 θ3</dt><dd id="rQ">–</dd>
+        <dt>θ̇ °/s</dt><dd id="rV">–</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="panel" id="p-chart" aria-label="Singularity graph">
+    <div class="ph"><span class="grip"></span><h2>Singularity graph</h2><button class="pmin" aria-label="Collapse panel">−</button><button class="pclose" aria-label="Hide panel">×</button></div>
+    <div class="pb">
+      <div class="chartwrap">
+        <div class="chartlegend"><span><i style="background:var(--link-a)"></i>|det J|, share of max</span><span><i style="background:var(--accent)"></i>fastest joint, °/s (log)</span><span><i style="background:var(--crit);height:1px"></i>joint speed limit</span></div>
+        <div class="canvasbox"><canvas id="ch"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-calc" aria-label="Calculations">
+    <div class="ph"><span class="grip"></span><h2>Calculations</h2><button class="pmin" aria-label="Collapse panel">−</button><button class="pclose" aria-label="Hide panel">×</button></div>
+    <div class="pb"><pre id="calc"></pre></div>
+  </section>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const S=0.01,d1=200,L2=250,L3=200,R2D=180/Math.PI,NS=240,DMAX=L2*L3*(L2+L3);
+const PRE={def:[300,-200,150,250,250,300],axis:[200,-150,300,-200,150,300],stretch:[150,0,250,445,0,230],edge:[300,-325,200,300,325,200]};
+let mode='lin',P0,P1,A,samples=[],ok=false,cur=0,T=2,VLIM=180,elbow='up';
+
+/* ---------- math ---------- */
+const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),scl=(a,k)=>a.map(v=>v*k),dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>Math.sqrt(dot(a,a)),lerp=(a,b,t)=>add(a,scl(sub(b,a),t));
+const f=(n,d=1)=>(Math.abs(n)<5e-7?0:n).toFixed(d),fv=v=>'('+v.map(x=>f(x)).join(', ')+')',fd=q=>'('+q.map(x=>f(x*R2D,2)+'°').join(', ')+')';
+function wrap(a){while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a}
+function ik(p){const t1=Math.atan2(p[1],p[0]),r=Math.hypot(p[0],p[1]),h=p[2]-d1,D=(r*r+h*h-L2*L2-L3*L3)/(2*L2*L3);if(D>1+1e-9||D<-1-1e-9)return null;
+  const Dc=Math.max(-1,Math.min(1,D)),t3=(elbow==='up'?-1:1)*Math.acos(Dc),t2=Math.atan2(h,r)-Math.atan2(L3*Math.sin(t3),L2+L3*Math.cos(t3));return{q:[t1,t2,t3],r,h,D}}
+function fk(q){const c1=Math.cos(q[0]),s1=Math.sin(q[0]),a=L2*Math.cos(q[1]),rho=a+L3*Math.cos(q[1]+q[2]);
+  return{el:[c1*a,s1*a,d1+L2*Math.sin(q[1])],tip:[c1*rho,s1*rho,d1+L2*Math.sin(q[1])+L3*Math.sin(q[1]+q[2])],rho}}
+function jac(q){const c1=Math.cos(q[0]),s1=Math.sin(q[0]),s2=Math.sin(q[1]),c2=Math.cos(q[1]),s23=Math.sin(q[1]+q[2]),c23=Math.cos(q[1]+q[2]),rho=L2*c2+L3*c23,v=-L2*s2-L3*s23;
+  return[[-s1*rho,c1*v,-c1*L3*s23],[c1*rho,s1*v,-s1*L3*s23],[0,rho,L3*c23]]}
+const det3=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+function solve3(m,b){const d=det3(m);return[0,1,2].map(c=>det3(m.map((row,i)=>row.map((v,j)=>j===c?b[i]:v)))/d)}
+const tr3=m=>[0,1,2].map(i=>m.map(r=>r[i])),mm=(a,b)=>a.map(r=>[0,1,2].map(j=>r[0]*b[0][j]+r[1]*b[1][j]+r[2]*b[2][j])),mv=(m,v)=>m.map(r=>dot(r,v));
+function dls(J,dp,l){if(l<=0)return solve3(J,dp);const M=mm(J,tr3(J)).map((r,i)=>r.map((v,j)=>v+(i===j?l*l:0)));return mv(tr3(J),solve3(M,dp))}
+function segDist(p){const ab=sub(P1,P0),L=dot(ab,ab);if(L<1e-9)return norm(sub(p,P0));const t=Math.max(0,Math.min(1,dot(sub(p,P0),ab)/L));return norm(sub(p,add(P0,scl(ab,t))))}
+function arcInfo(){const vh=parseFloat($('via').value)||150,mid=scl(add(P0,P1),.5);let via=add(mid,[0,0,vh]),ab=sub(via,P0),ac=sub(P1,P0),n=cross(ab,ac);
+  if(norm(n)<1e-6){via=add(mid,[vh||150,0,0]);ab=sub(via,P0);n=cross(ab,ac)}
+  if(norm(n)<1e-6)return null;
+  const n2=dot(n,n),c=add(P0,scl(add(scl(cross(n,ab),dot(ac,ac)),scl(cross(ac,n),dot(ab,ab))),1/(2*n2))),
+  R=norm(sub(P0,c)),u=scl(sub(P0,c),1/R),w=cross(scl(n,1/Math.sqrt(n2)),u),pc=sub(P1,c);let phi=Math.atan2(dot(pc,w),dot(pc,u));if(phi<=0)phi+=2*Math.PI;return{c,R,u,w,phi,via}}
+function target(s){if(mode==='arc'&&A){const t=s*A.phi;return add(A.c,scl(add(scl(A.u,Math.cos(t)),scl(A.w,Math.sin(t))),A.R))}return lerp(P0,P1,s)}
+
+function fail(msg){$('err').textContent=msg;ok=false;samples=[];clearPaths();drawChart();show(cur)}
+function build(){
+  $('err').textContent='';ok=true;
+  const v=['ax','ay','az','bx','by','bz'].map(i=>parseFloat($(i).value));
+  T=Math.max(0.2,parseFloat($('mt').value)||2);VLIM=Math.max(1,parseFloat($('vl').value)||180);elbow=$('elbow').value;
+  if(v.some(isNaN))return fail('Enter a number in every coordinate field.');
+  P0=v.slice(0,3);P1=v.slice(3);
+  if(norm(sub(P1,P0))<1)return fail('Start and end are the same point. Move one of them.');
+  A=arcInfo();
+  const i0=ik(P0),i1=ik(P1);
+  if(!i0||!i1)return fail((!i0?'Start':'End')+' point is out of reach. Its distance from the shoulder at (0, 0, 200) must be between 50 and 450 mm.');
+  samples=[];
+  if(mode==='joint'){const q0=i0.q,dq=[wrap(i1.q[0]-q0[0]),i1.q[1]-q0[1],i1.q[2]-q0[2]];for(let k=0;k<=NS;k++)samples.push({q:add(q0,scl(dq,k/NS))})}
+  else if(mode==='jac'){const N=Math.max(2,Math.min(400,parseInt($('nj').value)||20)),lam=Math.max(0,parseFloat($('lam').value)||0);let q=i0.q.slice();
+    for(let k=0;k<N;k++){const dp=sub(target((k+1)/N),target(k/N)),J=jac(q),dq=dls(J,dp,lam);if(dq.some(x=>!isFinite(x)))return fail('J cannot be inverted at step '+k+' (exactly singular). Add damping λ.');samples.push({q:q.slice(),J,dp,dq,k,N,lam});q=add(q,dq)}
+    samples.push({q,k:N,N,lam})}
+  else{for(let k=0;k<=NS;k++){const s=k/NS,r=ik(target(s));if(!r)return fail('The path leaves the reachable workspace near s = '+s.toFixed(2)+'. That is beyond the full-stretch singularity. Pick other points or a lower via height.');samples.push({q:r.q})}}
+  const n=samples.length;
+  samples.forEach((x,i)=>{const F=fk(x.q);x.tip=F.tip;x.el=F.el;x.rho=F.rho;x.det=det3(jac(x.q));
+    const a=samples[Math.max(0,i-1)].q,b=samples[Math.min(n-1,i+1)].q,ds=(Math.min(n-1,i+1)-Math.max(0,i-1))/(n-1);
+    x.qd=[0,1,2].map(j=>wrap(b[j]-a[j])/ds/T*R2D);x.vmax=Math.max(...x.qd.map(Math.abs))});
+  drawPaths();drawChart();show(cur);
+}
+const idx=s=>Math.round(s*(samples.length-1));
+
+/* ---------- calculations text ---------- */
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const K=s=>'<span class="k">'+esc(s)+'</span>',W=s=>'<span class="w">'+esc(s)+'</span>',C=s=>'<span class="c">'+esc(s)+'</span>',H=s=>'<span class="hd">'+esc(s)+'</span>';
+function ikBlock(t){const r=ik(t);if(!r)return[C('Target '+fv(t)+' is out of reach.')];
+  const L=[H('Inverse kinematics for target '+fv(t)),
+  '  θ1 = atan2(y, x) = atan2('+f(t[1])+', '+f(t[0])+') = '+(r.r<1e-6?'undefined':f(r.q[0]*R2D,2)+'°')+(r.r<25?'  '+C('← on the base axis: shoulder singularity'):''),
+  '  r  = √(x² + y²) = '+f(r.r)+' mm',
+  '  h  = z − d1 = '+f(t[2])+' − '+d1+' = '+f(r.h)+' mm',
+  '  D  = (r² + h² − L2² − L3²) / (2·L2·L3) = '+f(r.D,4)+(Math.abs(r.D)>0.995?'  '+C('← |D| ≈ 1: elbow singularity'):''),
+  '  θ3 = '+(elbow==='up'?'−':'+')+'acos(D) = '+f(r.q[2]*R2D,2)+'°  '+K('('+(elbow==='up'?'elbow up':'elbow down')+')'),
+  '  θ2 = atan2(h, r) − atan2(L3·sinθ3, L2 + L3·cosθ3) = '+f(r.q[1]*R2D,2)+'°'];return L}
+function calcText(sm,s){
+  const q=sm.q,{tip,rho}=fk(q);const L=[K('Arm  d1 = '+d1+'  L2 = '+L2+'  L3 = '+L3+' mm   move time T = '+T+' s'),K('P0 = '+fv(P0)+'   P1 = '+fv(P1)),''];
+  if(mode==='lin'){const t=target(s);L.push(H('Linear path'),'  P(s) = P0 + s·(P1 − P0)','  P('+f(s,3)+') = '+fv(t),'',...ikBlock(t))}
+  else if(mode==='arc'){const t=target(s);L.push(H('Circular path through P0, via point, P1'),'  via = midpoint(P0, P1) + (0, 0, '+f(parseFloat($('via').value)||150,0)+') = '+fv(A.via),
+    '  centre C = '+fv(A.c)+'   radius R = '+f(A.R)+' mm','  total sweep φ = '+f(A.phi*R2D,2)+'°',
+    '  P(s) = C + R·(cos(s·φ)·u + sin(s·φ)·w) = '+fv(t),'',...ikBlock(t))}
+  else if(mode==='joint'){const q0=samples[0].q,q1=samples[samples.length-1].q;L.push(H('Joint interpolation'),K('  IK is solved only at the two end points.'),
+    '  θ(P0) = '+fd(q0),'  θ(P1) = '+fd(q1),'  θ(s)  = θ(P0) + s·(θ(P1) − θ(P0))','  θ('+f(s,3)+') = '+fd(q),'',H('Forward kinematics  tip = f(θ)'),
+    '  ρ = L2·cosθ2 + L3·cos(θ2+θ3) = '+f(rho)+' mm','  x = cosθ1·ρ = '+f(tip[0]),'  y = sinθ1·ρ = '+f(tip[1]),'  z = d1 + L2·sinθ2 + L3·sin(θ2+θ3) = '+f(tip[2]))}
+  else{L.push(H('Jacobian steps, step '+sm.k+' of '+sm.N),K('  IK is solved only at the start; afterwards the joints are integrated.'),'  θ_k = '+fd(q));
+    if(sm.J){L.push('  J(θ_k) = ['+sm.J.map(r=>r.map(x=>f(x,1).padStart(9)).join(' ')).join(' ]\n           [')+' ]',
+      '  Δp = P(s_k+1) − P(s_k) = '+fv(sm.dp),
+      sm.lam>0?'  Δθ = Jᵀ·(J·Jᵀ + λ²·I)⁻¹·Δp   '+K('(damped least squares, λ = '+sm.lam+')'):'  Δθ = J⁻¹·Δp',
+      '     = '+fd(sm.dq),'  θ_k+1 = θ_k + Δθ')}
+    else{const e=sub(target(1),tip);L.push('  End reached. Drift from P1 = '+fv(e)+'   |e| = '+f(norm(e),2)+' mm',K('  More steps reduce the drift. Damping bounds joint speed but lets the tip leave the path.'))}}
+  const s3=Math.sin(q[2]),dn=Math.abs(sm.det)/DMAX;
+  L.push('',H('Singularity check'),'  det J = L2·L3·sinθ3·ρ',
+    '     sinθ3 = '+f(s3,4)+(Math.abs(s3)<0.1?'  '+C('← elbow singularity (stretched or folded)'):''),
+    '     ρ     = '+f(rho)+' mm'+(Math.abs(rho)<30?'  '+C('← shoulder singularity (tip on base axis)'):''),
+    '     |det J| = '+f(Math.abs(sm.det)/1e6,3)+' ×10⁶ mm³ = '+f(dn*100,1)+' % of max'+(dn<0.05?'  '+W('← near singular'):''),
+    '',H('Joint speeds  θ̇ = J⁻¹·ṗ'),K('  path covered in T = '+T+' s at constant path speed'),
+    '  θ̇ = ('+sm.qd.map(x=>f(x,1)).join(', ')+') °/s'+(sm.vmax>VLIM?'  '+C('← over '+VLIM+' °/s: a controller would slow down or stop'):''),
+    '',H('Result'),'  tip = '+fv(tip),'  distance from straight line P0–P1 = '+f(segDist(tip),2)+' mm');
+  return L.join('\n')}
+
+function show(s){
+  cur=s;$('tRead').textContent='s '+s.toFixed(2)+' · t '+(s*T).toFixed(2)+' s';
+  const chip=$('chip');
+  if(!ok||!samples.length){$('calc').innerHTML=C($('err').textContent||'No valid path.');chip.className='chip crit';chip.textContent='Unreachable';$('stDet').textContent='–';$('stV').textContent='–';['rTip','rQ','rV'].forEach(i=>$(i).textContent='–');arm.visible=false;return}
+  arm.visible=true;
+  const sm=samples[idx(s)],q=sm.q,{el,tip}=fk(q);placeArm(el,tip);drawTrail(idx(s));drawChart();
+  const dn=Math.abs(sm.det)/DMAX,over=sm.vmax>VLIM,near=dn<0.05;
+  chip.className='chip '+(over?'crit':near?'warn':'ok');chip.textContent=over?'Joint speed over limit':near?'Near singularity':'Clear';
+  jt.material.color.set(over?'#d6453d':near?'#e2a93a':'#e0701a');
+  $('stDet').textContent=f(dn*100,1)+' %';$('stV').textContent=f(sm.vmax,0)+' °/s';
+  $('rTip').textContent=fv(tip)+' mm';$('rQ').textContent=q.map(x=>f(x*R2D,1)+'°').join('  ');$('rV').textContent=sm.qd.map(x=>f(x,1)).join('  ');
+  $('calc').innerHTML=calcText(sm,s);
+}
+
+/* ---------- chart ---------- */
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function drawChart(){
+  const c=$('ch'),box=c.parentElement,w=box.clientWidth,h=box.clientHeight;if(!w||!h)return;
+  const dpr=devicePixelRatio||1;c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  const fg=cssv('--muted'),line=cssv('--line'),la=cssv('--link-a'),ac=cssv('--accent'),cr=cssv('--crit'),crs=cssv('--crit-soft'),fgs=cssv('--fg');
+  x.font='11px '+getComputedStyle(document.body).fontFamily;
+  const l=44,r=w-8,Wd=Math.max(10,r-l),gap=16,bottom=h-18,laneH=Math.max(20,(bottom-6-gap)/2),t1=6,b1=t1+laneH,t2=b1+gap,b2=bottom;
+  x.strokeStyle=line;x.lineWidth=1;x.strokeRect(l+.5,t1+.5,Wd,laneH);x.strokeRect(l+.5,t2+.5,Wd,b2-t2);
+  x.fillStyle=fg;x.textAlign='right';x.textBaseline='middle';
+  x.fillText('100%',l-6,t1+4);x.fillText('0',l-6,b1-2);
+  const Yv=v=>b2-(b2-t2)*Math.min(1,Math.max(0,Math.log10(Math.max(v,1))/5));
+  [[1,'1'],[100,'10²'],[1e4,'10⁴']].forEach(([v,s])=>{const y=Yv(v);x.fillText(s,l-6,y);x.strokeStyle=line;x.beginPath();x.moveTo(l,y+.5);x.lineTo(r,y+.5);x.stroke()});
+  x.textAlign='left';x.textBaseline='top';x.fillText('s = 0',l,bottom+4);x.textAlign='right';x.fillText('s = 1',r,bottom+4);
+  if(!ok||!samples.length)return;
+  const n=samples.length,X=i=>l+Wd*i/(n-1),Yd=v=>b1-laneH*Math.min(1,v);
+  x.fillStyle=crs;samples.forEach((p,i)=>{if(p.vmax>VLIM){const x0=X(Math.max(0,i-.5)),x1=X(Math.min(n-1,i+.5));x.fillRect(x0,t1,x1-x0+.5,b2-t1)}});
+  x.setLineDash([4,3]);x.strokeStyle=cr;x.lineWidth=1;x.beginPath();x.moveTo(l,Yv(VLIM));x.lineTo(r,Yv(VLIM));x.stroke();x.setLineDash([]);
+  x.lineWidth=1.8;x.lineJoin='round';
+  x.strokeStyle=la;x.beginPath();samples.forEach((p,i)=>{const y=Yd(Math.abs(p.det)/DMAX);i?x.lineTo(X(i),y):x.moveTo(X(i),y)});x.stroke();
+  x.strokeStyle=ac;x.beginPath();samples.forEach((p,i)=>{const y=Yv(p.vmax);i?x.lineTo(X(i),y):x.moveTo(X(i),y)});x.stroke();
+  const cx=l+Wd*cur;x.strokeStyle=fgs;x.lineWidth=1;x.beginPath();x.moveTo(cx,t1);x.lineTo(cx,b2);x.stroke();
+  const sm=samples[idx(cur)];x.fillStyle=la;x.beginPath();x.arc(cx,Yd(Math.abs(sm.det)/DMAX),3.5,0,7);x.fill();x.fillStyle=ac;x.beginPath();x.arc(cx,Yv(sm.vmax),3.5,0,7);x.fill();
+}
+
+/* ---------- 3D ---------- */
+const stage=$('stage'),rd=new THREE.WebGLRenderer({antialias:true,alpha:true});rd.setPixelRatio(Math.min(2,devicePixelRatio||1));stage.insertBefore(rd.domElement,stage.firstChild);
+const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(42,1,.1,200);cam.position.set(7.5,6,8.5);
+const oc=new THREE.OrbitControls(cam,rd.domElement);oc.target.set(1,1.8,0);oc.enableDamping=true;oc.update();
+sc.add(new THREE.AmbientLight(0xffffff,.62));const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(5,10,7);sc.add(dl);
+const grid=new THREE.GridHelper(12,24);grid.material.transparent=true;grid.material.opacity=.55;sc.add(grid);
+const V=p=>new THREE.Vector3(p[0]*S,p[2]*S,-p[1]*S),M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.55,metalness:.1});
+function axisLine(to,c){const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,.002,0),to]);sc.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:c})))}
+axisLine(V([130,0,0]),0xd6453d);axisLine(V([0,130,0]),0x2e9d5b);axisLine(new THREE.Vector3(0,1.3,0),0x3b6fd8);
+const arm=new THREE.Group();sc.add(arm);
+function cyl(r,c,g){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,24),M(c));(g||arm).add(m);return m}
+function sph(r,c,g){const m=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),M(c));(g||arm).add(m);return m}
+function between(m,a,b){const va=V(a),vb=V(b),d=vb.clone().sub(va),len=d.length();m.position.copy(va).add(vb).multiplyScalar(.5);m.scale.set(1,Math.max(len,1e-4),1);if(len>1e-6)m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize())}
+const base=new THREE.Mesh(new THREE.CylinderGeometry(.42,.5,.12,32),M(0x5f6b78));base.position.y=.06;sc.add(base);
+const ped=cyl(.2,0x7a8591,sc);between(ped,[0,0,0],[0,0,d1]);
+const up=cyl(.1,0x4459c4),fo=cyl(.075,0x7d8fe3);
+const sh=V([0,0,d1]);sph(.16,0x3f4a57).position.copy(sh);
+const je=sph(.12,0x3f4a57),jt=sph(.09,0xe0701a);
+const ms=sph(.085,0x2e9d5b,sc),me=sph(.085,0xd6453d,sc),mvp=sph(.055,0x8894a3,sc);
+const sing=new THREE.Group();sc.add(sing);
+const tm=(c,o)=>new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:o,depthWrite:false,side:THREE.DoubleSide});
+const outer=new THREE.Mesh(new THREE.SphereGeometry((L2+L3)*S,64,40),tm(0xd6453d,.05));outer.position.copy(sh);sing.add(outer);
+const ow=new THREE.Mesh(new THREE.SphereGeometry((L2+L3)*S,28,18),new THREE.MeshBasicMaterial({color:0xd6453d,wireframe:true,transparent:true,opacity:.1}));ow.position.copy(sh);sing.add(ow);
+const inner=new THREE.Mesh(new THREE.SphereGeometry((L2-L3)*S,24,16),tm(0xd6453d,.35));inner.position.copy(sh);sing.add(inner);
+const axl=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,9,8),tm(0xd6453d,.75));axl.position.set(0,4.5,0);sing.add(axl);
+function placeArm(el,tip){between(up,[0,0,d1],el);between(fo,el,tip);je.position.copy(V(el));jt.position.copy(V(tip))}
+let pre,ln,tr;
+function mk(pts,mat){const o=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),mat);sc.add(o);return o}
+function rm(o){if(o){sc.remove(o);o.geometry.dispose()}}
+function clearPaths(){rm(pre);rm(ln);rm(tr);pre=ln=tr=null}
+function drawPaths(){rm(pre);rm(ln);ms.position.copy(V(P0));me.position.copy(V(P1));mvp.visible=mode==='arc'&&!!A;if(A)mvp.position.copy(V(A.via));
+  ln=mk([V(P0),V(P1)],new THREE.LineDashedMaterial({color:0x8894a3,dashSize:.1,gapSize:.08}));ln.computeLineDistances();
+  pre=mk(samples.map(x=>V(x.tip)),new THREE.LineBasicMaterial({color:0xe0701a,transparent:true,opacity:.3}))}
+function drawTrail(k){rm(tr);tr=mk(samples.slice(0,k+1).map(x=>V(x.tip)),new THREE.LineBasicMaterial({color:0xe0701a}))}
+function applyTheme(){const g=new THREE.Color(cssv('--grid')||'#a9b3bf');grid.material.color=g;if(grid.material.vertexColors){const a=grid.geometry.attributes.color;for(let i=0;i<a.count;i++)a.setXYZ(i,g.r,g.g,g.b);a.needsUpdate=true}drawChart()}
+function sizeStage(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;rd.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
+new ResizeObserver(sizeStage).observe(stage);
+new ResizeObserver(drawChart).observe($('ch').parentElement);
+
+/* ---------- playback ---------- */
+let playing=false,last=0;
+function setPlaying(p){playing=p;$('playBtn').textContent=p?'Pause':'Play';last=performance.now();if(p&&cur>=1)cur=0}
+function tick(now){
+  if(playing&&ok){const dt=(now-last)/1000;last=now;let s=cur+dt*parseFloat($('rate').value)/T;
+    if(s>=1){if($('loop').checked)s=s%1;else{s=1;setPlaying(false)}}
+    $('sl').value=Math.round(s*1000);show(s)}
+  oc.update();rd.render(sc,cam);requestAnimationFrame(tick)}
+requestAnimationFrame(tick);
+$('playBtn').onclick=()=>setPlaying(!playing);
+$('sl').oninput=e=>{setPlaying(false);show(e.target.value/1000)};
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.target.closest('input,select,textarea,button')){e.preventDefault();setPlaying(!playing)}});
+
+/* ---------- controls wiring ---------- */
+function setPreset(k){['ax','ay','az','bx','by','bz'].forEach((id,j)=>$(id).value=PRE[k][j]);document.querySelectorAll('.presets button').forEach(b=>b.classList.toggle('on',b.dataset.p===k));cur=0;$('sl').value=0;setPlaying(false);build()}
+document.querySelectorAll('.presets button').forEach(b=>b.onclick=()=>setPreset(b.dataset.p));
+function setMode(m){mode=m;document.querySelectorAll('.modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));document.querySelectorAll('.jaconly').forEach(l=>l.classList.toggle('dim',m!=='jac'));$('via').parentElement.classList.toggle('dim',m!=='arc');build()}
+document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+['ax','ay','az','bx','by','bz'].forEach(i=>$(i).addEventListener('input',()=>{document.querySelectorAll('.presets button').forEach(b=>b.classList.remove('on'));build()}));
+['nj','lam','mt','vl','via','elbow'].forEach(i=>$(i).addEventListener('input',build));
+$('sg').onchange=e=>{sing.visible=e.target.checked;$('lgSing').hidden=!e.target.checked};
+
+/* ---------- floating panels ---------- */
+const app=$('app'),panels=[...document.querySelectorAll('.panel')],KEY='arm-kin-lab-layout-v1',MINW=230,MINH=110;
+const narrow=matchMedia('(max-width: 760px)');
+const stacked=()=>app.classList.contains('stacked');
+let zTop=100;
+const barH=()=>document.querySelector('.bar').offsetHeight;
+function front(p){p.style.zIndex=++zTop}
+function place(p,r){p.style.left=Math.round(r.x)+'px';p.style.top=Math.round(r.y)+'px';p.style.width=Math.round(r.w)+'px';if(!p.classList.contains('collapsed'))p.style.height=Math.round(r.h)+'px';p.dataset.h=Math.round(r.h)}
+function defaults(){
+  const Wd=app.clientWidth,Ht=app.clientHeight,t=barH()+12,g=16,rw=Math.min(440,Math.max(320,Wd*0.3)),lw=310;
+  const chartH=Math.min(250,Math.max(170,Ht*0.28)),calcH=Math.max(160,Ht-t-chartH-g-12);
+  const playW=Math.max(300,Math.min(620,Wd-lw-rw-g*4));
+  return{
+    'p-points':{x:g,y:t,w:lw,h:268},
+    'p-motion':{x:g,y:t+280,w:lw,h:Math.min(318,Math.max(200,Ht-t-280-g))},
+    'p-play':{x:lw+g*2,y:Ht-g-172,w:playW,h:172},
+    'p-chart':{x:Wd-rw-g,y:Ht-g-chartH,w:rw,h:chartH},
+    'p-calc':{x:Wd-rw-g,y:t,w:rw,h:calcH}}}
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||null}catch(e){return null}}
+function save(){if(stacked())return;try{const o={};panels.forEach(p=>o[p.id]={x:p.offsetLeft,y:p.offsetTop,w:p.offsetWidth,h:+p.dataset.h||p.offsetHeight,hidden:p.hidden,col:p.classList.contains('collapsed'),z:+p.style.zIndex||0});localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+function clampPanel(p){if(stacked()||p.hidden)return;const Wd=app.clientWidth,Ht=app.clientHeight,w=p.offsetWidth;
+  let x=Math.min(Math.max(p.offsetLeft,-w+90),Wd-90),y=Math.min(Math.max(p.offsetTop,barH()+4),Ht-36);p.style.left=x+'px';p.style.top=y+'px'}
+function setCollapsed(p,c){p.classList.toggle('collapsed',c);p.style.height=c?'auto':(p.dataset.h||200)+'px';p.querySelector('.pmin').textContent=c?'+':'−';p.querySelector('.pmin').setAttribute('aria-label',c?'Expand panel':'Collapse panel')}
+function setHidden(p,h){p.hidden=h;const b=document.querySelector('.toggles [data-panel="'+p.id+'"]');if(b)b.setAttribute('aria-pressed',String(!h));if(!h){front(p);clampPanel(p)}}
+function applyLayout(saved){const d=defaults();panels.forEach(p=>{const s=saved&&saved[p.id];place(p,s?{x:s.x,y:s.y,w:s.w,h:s.h}:d[p.id]);setCollapsed(p,!!(s&&s.col));setHidden(p,!!(s&&s.hidden));p.style.zIndex=s&&s.z?s.z:++zTop;zTop=Math.max(zTop,+p.style.zIndex)});panels.forEach(clampPanel)}
+
+panels.forEach(p=>{
+  ['n','e','s','w','ne','nw','se','sw'].forEach(d=>{const el=document.createElement('div');el.className='rz rz-'+d;el.setAttribute('aria-hidden','true');p.appendChild(el);
+    el.addEventListener('pointerdown',e=>{if(stacked()||p.classList.contains('collapsed'))return;e.preventDefault();e.stopPropagation();front(p);
+      const sx=e.clientX,sy=e.clientY,r={x:p.offsetLeft,y:p.offsetTop,w:p.offsetWidth,h:p.offsetHeight},top=barH()+4;el.setPointerCapture(e.pointerId);p.classList.add('moving');
+      const mvv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;let{x,y,w,h}=r;
+        if(d.includes('e'))w=Math.max(MINW,r.w+dx);if(d.includes('s'))h=Math.max(MINH,r.h+dy);
+        if(d.includes('w')){w=Math.max(MINW,r.w-dx);x=r.x+r.w-w}
+        if(d.includes('n')){h=Math.max(MINH,r.h-dy);y=r.y+r.h-h;if(y<top){h-=top-y;y=top}}
+        place(p,{x,y,w,h})};
+      const upp=()=>{el.removeEventListener('pointermove',mvv);el.removeEventListener('pointerup',upp);el.removeEventListener('pointercancel',upp);p.classList.remove('moving');save()};
+      el.addEventListener('pointermove',mvv);el.addEventListener('pointerup',upp);el.addEventListener('pointercancel',upp)})});
+  const head=p.querySelector('.ph');
+  head.addEventListener('pointerdown',e=>{if(stacked()||e.target.closest('button'))return;e.preventDefault();front(p);
+    const sx=e.clientX,sy=e.clientY,ox=p.offsetLeft,oy=p.offsetTop;head.setPointerCapture(e.pointerId);p.classList.add('moving');
+    const mvv=ev=>{p.style.left=(ox+ev.clientX-sx)+'px';p.style.top=(oy+ev.clientY-sy)+'px';clampPanel(p)};
+    const upp=()=>{head.removeEventListener('pointermove',mvv);head.removeEventListener('pointerup',upp);head.removeEventListener('pointercancel',upp);p.classList.remove('moving');save()};
+    head.addEventListener('pointermove',mvv);head.addEventListener('pointerup',upp);head.addEventListener('pointercancel',upp)});
+  head.addEventListener('dblclick',e=>{if(!e.target.closest('button')){setCollapsed(p,!p.classList.contains('collapsed'));save()}});
+  p.addEventListener('pointerdown',()=>{if(!stacked())front(p)},true);
+  p.querySelector('.pmin').onclick=()=>{setCollapsed(p,!p.classList.contains('collapsed'));save()};
+  p.querySelector('.pclose').onclick=()=>{setHidden(p,true);save()};
+});
+document.querySelectorAll('.toggles [data-panel]').forEach(b=>b.onclick=()=>{const p=$(b.dataset.panel);setHidden(p,!p.hidden);if(!p.hidden&&stacked())p.scrollIntoView({block:'nearest'});save()});
+$('resetLayout').onclick=()=>{try{localStorage.removeItem(KEY)}catch(e){}applyLayout(null);save()};
+function updateMode(){app.classList.toggle('stacked',narrow.matches);$('resetLayout').hidden=narrow.matches;sizeStage();drawChart()}
+narrow.addEventListener('change',updateMode);
+addEventListener('resize',()=>{panels.forEach(clampPanel)});
+
+/* ---------- theme follow ---------- */
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- start ---------- */
+updateMode();applyLayout(load());applyTheme();
+mode='lin';document.querySelector('.modes [data-m="lin"]').classList.add('on');document.querySelectorAll('.jaconly').forEach(l=>l.classList.add('dim'));$('via').parentElement.classList.add('dim');
+setPreset('def');sizeStage();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawChart);
+})();
+</script>
+
+</body></html>
